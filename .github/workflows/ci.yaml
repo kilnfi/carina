@@ -7,12 +7,12 @@ on:
 
   push:
     branches:
-      - feature/work-flow
+      - release
 
 jobs:
 
   changes:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     outputs:
       go: ${{ steps.filter.outputs.go }}
       charts: ${{ steps.filter.outputs.charts }}
@@ -38,7 +38,7 @@ jobs:
               - 'charts/**/*'
 
   security:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
 
       - name: Checkout
@@ -54,7 +54,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     needs: changes
 
     steps:
@@ -62,11 +62,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Set up Go 1.17
+      - name: Set up Go 1.20
         id: go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: '1.20.4'
 
       - name: Set up Docker Buildx
         id: buildx
@@ -82,7 +82,7 @@ jobs:
         run: |
           sudo apt-get -qq update || true
           sudo apt-get install -y pigz
-          curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.22.0/bin/linux/amd64/kubectl
+          curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.25.0/bin/linux/amd64/kubectl
           chmod +x ./kubectl
           sudo mv ./kubectl /usr/local/bin/kubectl
 
@@ -90,11 +90,11 @@ jobs:
         run: |
           echo "building images..."
           go mod vendor
-          echo "docker build -t registry.cn-hangzhou.aliyuncs.com/carina/carina:e2e . "
-          docker build -t registry.cn-hangzhou.aliyuncs.com/carina/carina:e2e .
+          echo "docker build -t ghcr.io/kilnfi/carina:e2e . "
+          docker build -t ghcr.io/kilnfi/carina:e2e .
           echo "creating images cache..."
           docker save \
-            registry.cn-hangzhou.aliyuncs.com/carina/carina:e2e \
+            ghcr.io/kilnfi/carina:e2e \
             | pigz > docker.tar.gz
 
       - name: cache
@@ -105,7 +105,7 @@ jobs:
 
   #  helm:
   #    name: Helm chart
-  #    runs-on: ubuntu-18.04
+  #    runs-on: ubuntu-22.04
   #    needs:
   #      - changes
   #      - build
@@ -187,7 +187,7 @@ jobs:
 
   kubernetes:
     name: Kubernetes
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     needs:
       - changes
       - build
@@ -196,19 +196,18 @@ jobs:
 
     strategy:
       matrix:
-        #     k8s: [v1.19.11, v1.20.7, v1.21.2, v1.22.0]
-        k8s: [v1.22.10]
+        k8s: [v1.25.7, v1.26.4]
 
     steps:
 
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Set up Go 1.17
+      - name: Set up Go 1.20
         id: go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: '1.20.4'
 
       - name: cache
         uses: actions/download-artifact@v2
@@ -217,7 +216,7 @@ jobs:
 
       - name: Create Kubernetes ${{ matrix.k8s }} cluster
         run: |
-          curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_VERSION=v1.22.10+k3s1 sh -
+          curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE=777 INSTALL_K3S_VERSION=${{ matrix.k8s }}+k3s1 sh -
           cat /etc/rancher/k3s/k3s.yaml
           mkdir -p ~/.kube
           cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
@@ -232,7 +231,7 @@ jobs:
         run: |
           echo "loading docker images..."
           pigz -dc docker.tar.gz | docker load
-          sudo docker save -o carina-e2e.tar registry.cn-hangzhou.aliyuncs.com/carina/carina:e2e
+          sudo docker save -o carina-e2e.tar ghcr.io/kilnfi/carina:e2e
           sudo k3s ctr -n k8s.io i import carina-e2e.tar
           sudo k3s ctr -n k8s.io i ls
 
@@ -252,14 +251,51 @@ jobs:
           echo "kubectl get nodestorageresource -oyaml"
           kubectl get nodestorageresource -oyaml
 
+      - name: Set GOPATH
+        run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+
       - name: Run e2e tests
         env:
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
         run: |
-          kubectl get nodes 
-          echo "e2e" 
+          kubectl get nodes
+          echo "e2e"
           go install github.com/onsi/ginkgo/ginkgo@v1.16.4
           whereis ginkgo
           cd test/e2e/ && make e2e
+  push:
+    name: Push image
+    runs-on: ubuntu-22.04
+    needs:
+      - build
+    steps:
+      - name: "login to ghcr"
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: "generate:build_id"
+        run: |
+          branch=${GITHUB_REF##*/}
+          sha=${GITHUB_SHA::8}
+          ts=$(date +%s)
+          echo "BUILD_ID=${branch}-${sha}-${ts}" >> $GITHUB_ENV
+
+      - name: cache
+        uses: actions/download-artifact@v2
+        with:
+          name: docker.tar.gz
+
+
+      - name: Load images from cache
+        run: |
+          echo "loading docker images..."
+          pigz -dc docker.tar.gz | docker load
+
+      - name: Push
+        run: |
+          docker tag ghcr.io/kilnfi/carina:e2e ghcr.io/kilnfi/carina:${{ env.BUILD_ID }}
+          docker push ghcr.io/kilnfi/carina:${{ env.BUILD_ID }}
