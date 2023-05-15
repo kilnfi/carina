@@ -96,6 +96,10 @@ jobs:
           docker save \
             ghcr.io/kilnfi/carina:e2e \
             | pigz > docker.tar.gz
+          cd scheduler
+          go mod vendor
+          echo "docker build -t ghcr.io/kilnfi/carina:scheduler-e2e . "
+          docker build -t ghcr.io/kilnfi/carina:scheduler-e2e .
 
       - name: cache
         uses: actions/upload-artifact@v2
@@ -299,3 +303,5 @@ jobs:
         run: |
           docker tag ghcr.io/kilnfi/carina:e2e ghcr.io/kilnfi/carina:${{ env.BUILD_ID }}
           docker push ghcr.io/kilnfi/carina:${{ env.BUILD_ID }}
+          docker tag ghcr.io/kilnfi/carina:scheduler-e2e ghcr.io/kilnfi/carina:scheduler-${{ env.BUILD_ID }}
+          docker push ghcr.io/kilnfi/carina:scheduler-${{ env.BUILD_ID }}
