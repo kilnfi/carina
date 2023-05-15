@@ -96,6 +96,10 @@ jobs:
           docker save \
             registry.cn-hangzhou.aliyuncs.com/carina/carina:e2e \
             | pigz > docker.tar.gz
+          cd scheduler
+          go mod vendor
+          echo "docker build -t ghcr.io/kilnfi/carina:scheduler-e2e . "
+          docker build -t ghcr.io/kilnfi/carina:scheduler-e2e .
 
       - name: cache
         uses: actions/upload-artifact@v2
@@ -258,8 +262,44 @@ jobs:
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
         run: |
-          kubectl get nodes 
-          echo "e2e" 
+          kubectl get nodes
+          echo "e2e"
           go install github.com/onsi/ginkgo/ginkgo@v1.16.4
           whereis ginkgo
           cd test/e2e/ && make e2e
+  push:
+    name: Push image
+    runs-on: ubuntu-22.04
+    needs:
+      - build
+    steps:
+      - name: "login to ghcr"
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: "generate:build_id"
+        run: |
+          branch=${GITHUB_REF##*/}
+          sha=${GITHUB_SHA::8}
+          ts=$(date +%s)
+          echo "BUILD_ID=${branch}-${sha}-${ts}" >> $GITHUB_ENV
+
+      - name: cache
+        uses: actions/download-artifact@v2
+        with:
+          name: docker.tar.gz
+
+
+      - name: Load images from cache
+        run: |
+          echo "loading docker images..."
+          pigz -dc docker.tar.gz | docker load
+
+      - name: Push
+        run: |
+          docker tag ghcr.io/kilnfi/carina:e2e ghcr.io/kilnfi/carina:${{ env.BUILD_ID }}
+          docker push ghcr.io/kilnfi/carina:${{ env.BUILD_ID }}
+          docker tag ghcr.io/kilnfi/carina:scheduler-e2e ghcr.io/kilnfi/carina:scheduler-${{ env.BUILD_ID }}
+          docker push ghcr.io/kilnfi/carina:scheduler-${{ env.BUILD_ID }}
