@@ -1,0 +1,38 @@
+carina-scheduler:
+  enabled: true
+  image:
+    repository: ghcr.io/kilnfi/carina
+    tag: "scheduler-__TAG__"
+image:
+  carina:
+    repository: ghcr.io/kilnfi/carina
+    tag: "controller-__TAG__"
+  livenessProbe:
+    repository: registry.k8s.io/sig-storage/livenessprobe
+    tag: "v2.7.0"
+  csiProvisioner:
+    repository: registry.k8s.io/sig-storage/csi-provisioner
+    tag: "v2.2.2"
+  csiResizer:
+    repository: registry.k8s.io/sig-storage/csi-resizer
+    tag: "v1.5.0"
+  nodeDriverRegistrar:
+    repository: registry.k8s.io/sig-storage/csi-node-driver-registrar
+    tag: "v2.5.1"
+  nodeInitImage:
+    repository: busybox
+    tag: "1.28"
+config:
+  schedulerStrategy: spreadout
+  diskScanInterval: 3
+  diskSelector:
+  - name: "carina-vg-ssd"
+    re: ["__DEVICE__+"]
+    policy: "LVM"
+    nodeLabel: "kubernetes.io/hostname"
+storage:
+  StorageClass:
+  - fstype: ext4
+    disktype: carina-vg-ssd
+    reclaimPolicy: Delete
+    volumeBindingMode: WaitForFirstConsumer

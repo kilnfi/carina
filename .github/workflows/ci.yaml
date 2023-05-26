@@ -1,9 +1,10 @@
 name: CI
 
 on:
+  workflow_dispatch:
   pull_request:
     branches:
-      - "*"
+      - main
 
   push:
     branches:
@@ -42,16 +43,71 @@ jobs:
           set -x
           git fetch origin
           tag="$(git describe --tags)"
-
           echo "building images..."
           go mod vendor
           echo "docker build -t ghcr.io/kilnfi/carina:controller-${tag} . "
           docker build -t "ghcr.io/kilnfi/carina:controller-${tag}" .
-
           cd scheduler
           go mod vendor
           echo "docker build -t ghcr.io/kilnfi/carina:scheduler-${tag} ."
           docker build -t "ghcr.io/kilnfi/carina:scheduler-${tag}" .
+      # Interactive debug
+      #- name: Setup tmate session
+      #  uses: mxschmitt/action-tmate@v3
+      #  with:
+      #    detached: true
+      - name: Test Kubernetes
+        if: github.ref != 'refs/heads/main'
+        run: |
+          set -x
+          exec 2>&1
+          git fetch origin
+          tag="$(git describe --tags)"
+
+          # Cluster
+          curl -s -L -o k3s https://github.com/k3s-io/k3s/releases/download/v1.25.7%2Bk3s1/k3s
+          chmod +x k3s
+          sudo ./k3s server --disable coredns,servicelb,traefik,metrics-server --write-kubeconfig "$(pwd)/kubeconfig" --write-kubeconfig-mode 777 > k3s_log 2>&1 &
+          export KUBECONFIG="$(pwd)/kubeconfig"
+          # Wait init
+          while true; do ./k3s kubectl get deploy -n kube-system local-path-provisioner && break; sleep 5; done
+          docker save "ghcr.io/kilnfi/carina:scheduler-${tag}" "ghcr.io/kilnfi/carina:controller-${tag}" | sudo ./k3s ctr image import -
+
+          # Debug output
+          debug() {
+            set +e
+            ./k3s kubectl get po -A
+            ./k3s kubectl get pvc -A
+            ./k3s kubectl get nodestorageresource -A -o yaml
+            ./k3s kubectl logs -n carina --tail=200 -l app.kubernetes.io/instance=carina-csi-driver --all-containers=true
+            #tail -200 k3s_log
+          }
+          trap debug EXIT
+
+          # Carina install
+          ./k3s kubectl create ns carina
+          sed -i -e 's/__TAG__/'"${tag}"'/' .github/kiln-values.yaml
+          helm upgrade --install -n carina carina-csi-driver charts/ -f .github/kiln-values.yaml
+
+          # Wait deploy
+          ./k3s kubectl rollout status -n carina --watch --timeout=200s ds/csi-carina-node
+          ./k3s kubectl wait po -n carina -l app=csi-carina-node --for=condition=ready --timeout=200s
+
+          # Update device
+          device=$(./k3s kubectl exec -t -n carina ds/csi-carina-node -c csi-carina-node -- sh -c 'truncate --size=12G /tmp/disk.device; losetup --show -f /tmp/disk.device')
+          sed -i -e 's/__DEVICE__/'"${device#/dev/}"'/' .github/kiln-values.yaml
+          helm upgrade --install -n carina carina-csi-driver charts/ -f .github/kiln-values.yaml
+
+          # Refresh
+          sleep 60
+          ./k3s kubectl rollout restart -n carina deployment carina-csi-driver-carina-scheduler
+          ./k3s kubectl rollout restart -n carina deployment csi-carina-controller
+          ./k3s kubectl exec -t -n carina ds/csi-carina-node -c csi-carina-node -- sh -c 'pvcreate '"${device}"'; kill 1'
+
+          # Test
+          helm test -n carina carina-csi-driver
+          ./k3s kubectl wait -n carina --for=jsonpath='{.status.phase}'=Bound pvc/carina-vg-ssd-testpvc --timeout=500s
+          ./k3s kubectl wait -n carina --for=condition=ready po -l storageclass=carina-vg-ssd --timeout=500s
       - name: Push image
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
@@ -88,36 +144,3 @@ jobs:
           sed -i -e 's/^name: carina-csi-driver/name: carina/' charts/Chart.yaml
           helm package charts --version "${tag}"
           HELM_EXPERIMENTAL_OCI=1 helm push "carina-${tag}.tgz" "oci://ghcr.io/kilnfi"
-
-# TODO testing
-# K3D_FIX_MOUNTS=1 k3d cluster create -i rancher/k3s:v1.25.7-k3s1 test
-# k3d kubeconfig get test > test
-# export KUBECONFIG=$(pwd)/test
-# HELM_EXPERIMENTAL_OCI=1 helm upgrade --install -n carina carina-csi-driver charts/ -f kiln-values.yaml
-
-# Values
-#carina-scheduler:
-#  enabled: true
-#  image:
-#    repository: ghcr.io/kilnfi/carina
-#    tag: "scheduler-v0.12.0-13-g9f990a6"
-#image:
-#  carina:
-#    repository: ghcr.io/kilnfi/carina
-#    tag: "controller-v0.12.0-13-g9f990a6"
-#  livenessProbe:
-#    repository: registry.k8s.io/sig-storage/livenessprobe
-#    tag: "v2.7.0"
-#  csiProvisioner:
-#    repository: registry.k8s.io/sig-storage/csi-provisioner
-#    tag: "v2.2.2"
-#  csiResizer:
-#    repository: registry.k8s.io/sig-storage/csi-resizer
-#    tag: "v1.5.0"
-#  nodeDriverRegistrar:
-#    repository: registry.k8s.io/sig-storage/csi-node-driver-registrar
-#    tag: "v2.5.1"
-#  nodeInitImage:
-#    repository: busybox
-#    tag: "1.28"
-#
