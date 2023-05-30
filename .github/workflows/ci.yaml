@@ -65,7 +65,7 @@ jobs:
           tag="$(git describe --tags)"
 
           # Cluster
-          curl -s -L -o k3s https://github.com/k3s-io/k3s/releases/download/v1.25.7%2Bk3s1/k3s
+          curl -s -L -o k3s "https://github.com/k3s-io/k3s/releases/download/v1.27.4+k3s1/k3s"
           chmod +x k3s
           sudo ./k3s server --disable coredns,servicelb,traefik,metrics-server --write-kubeconfig "$(pwd)/kubeconfig" --write-kubeconfig-mode 777 > k3s_log 2>&1 &
           export KUBECONFIG="$(pwd)/kubeconfig"
