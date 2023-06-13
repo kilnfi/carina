@@ -141,6 +141,5 @@ jobs:
           git fetch origin
           tag="$(git describe --tags)"
 
-          sed -i -e 's/^name: carina-csi-driver/name: carina/' charts/Chart.yaml
           helm package charts --version "${tag}"
-          HELM_EXPERIMENTAL_OCI=1 helm push "carina-${tag}.tgz" "oci://ghcr.io/kilnfi"
+          HELM_EXPERIMENTAL_OCI=1 helm push "carina-csi-driver-${tag}.tgz" "oci://ghcr.io/kilnfi/helm-charts"
