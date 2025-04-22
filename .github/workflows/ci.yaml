@@ -80,6 +80,8 @@ jobs:
             ./k3s kubectl get pvc -A
             ./k3s kubectl get nodestorageresource -A -o yaml
             ./k3s kubectl logs -n carina --tail=200 -l app.kubernetes.io/instance=carina-csi-driver --all-containers=true
+            ./k3s kubectl get po -n carina -o yaml > carina_pods_log 2>&1
+            ./k3s kubectl logs -n carina --tail=10000 -l app.kubernetes.io/instance=carina-csi-driver --all-containers=true > carina_log 2>&1
             #tail -200 k3s_log
           }
           trap debug EXIT
@@ -108,6 +110,34 @@ jobs:
           helm test -n carina carina-csi-driver
           ./k3s kubectl wait -n carina --for=jsonpath='{.status.phase}'=Bound pvc/carina-vg-ssd-testpvc --timeout=500s
           ./k3s kubectl wait -n carina --for=condition=ready po -l storageclass=carina-vg-ssd --timeout=500s
+
+
+          # Test filter logging
+          ./k3s kubectl taint nodes -l node-role.kubernetes.io/control-plane=true test=off:NoSchedule
+          ./k3s kubectl delete po -n carina -l storageclass=carina-vg-ssd
+          sleep 30
+          grep "Filter plugin unsuccessfull on node" < <(./k3s kubectl logs -n carina --tail=10000 -l app.kubernetes.io/instance=carina-csi-driver --all-containers=true)
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k3s_log
+          path: k3s_log
+          retention-days: 5
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: carina_log
+          path: carina_log
+          retention-days: 5
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: carina_pods_log
+          path: carina_pods_log
+          retention-days: 5
       - name: Push image
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
