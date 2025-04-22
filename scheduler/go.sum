@@ -346,6 +346,8 @@ github.com/prometheus/procfs v0.6.0/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/prometheus/procfs v0.8.0 h1:ODq8ZFEaYeCaZOJlZZdJA2AbQR98dSHSM1KW/You5mo=
 github.com/prometheus/procfs v0.8.0/go.mod h1:z7EfXMXOkbkqb9IINtpCn86r/to3BnA0uaxHdg830/4=
+github.com/redref/kubernetes v0.0.0-20250422201706-fce0c9a467a5 h1:DNbuhEc+IrwGkrjcG/xuoFljFnayJrbnLSm6qPgnWtg=
+github.com/redref/kubernetes v0.0.0-20250422201706-fce0c9a467a5/go.mod h1:z1URAaBJ+XnOTr3Q/l4umxRUxn/OyD2fbkUgS0Bl7u4=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.11.0 h1:cWPaGQEPrBb5/AsnsZesgZZ9yb1OQ+GOISoDNXVBh4M=
@@ -854,8 +856,6 @@ k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 h1:+70TFaan3hfJzs+7VK2o+O
 k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280/go.mod h1:+Axhij7bCpeqhklhUTe3xmOn6bWxolyZEeyaFpjGtl4=
 k8s.io/kube-scheduler v0.26.11 h1:j5ogiWMHZ5XGSLB4ZLZI1J7pTCHGDf8E8lt031/VUYg=
 k8s.io/kube-scheduler v0.26.11/go.mod h1:ChZARJBQplX3hoxam5RICUoxj1LQ7xAU6HVzHouIOzc=
-k8s.io/kubernetes v1.26.11 h1:g3r1IAUqsaHnOG2jdpoagJ5W9UCXkR2ljQ/7BmCzPNg=
-k8s.io/kubernetes v1.26.11/go.mod h1:z1URAaBJ+XnOTr3Q/l4umxRUxn/OyD2fbkUgS0Bl7u4=
 k8s.io/mount-utils v0.26.11 h1:wt0TyLv1YhRAxHvQB6w3GikdeHnMm1hpwzOVLweRGyI=
 k8s.io/mount-utils v0.26.11/go.mod h1:huSg2NI5P8ZNfE8PkQmm5a9fFZ9iHCXFxP/rasMCgYA=
 k8s.io/utils v0.0.0-20221107191617-1a15be271d1d h1:0Smp/HP1OH4Rvhe+4B8nWGERtlqAGSftbSbbmm45oFs=
