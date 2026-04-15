@@ -44,7 +44,7 @@ var _ = framework.CrainaDescribe("Block Mode RAW pvc e2e test", func() {
 				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 				VolumeMode:       &persistentVolumeBlock,
 				StorageClassName: &f.Namespace,
-				Resources: corev1.ResourceRequirements{
+				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("3Gi"),
 					}},
@@ -70,7 +70,7 @@ var _ = framework.CrainaDescribe("Block Mode RAW pvc e2e test", func() {
 					AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					VolumeMode:       &persistentVolumeBlock,
 					StorageClassName: &f.Namespace,
-					Resources: corev1.ResourceRequirements{
+					Resources: corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("3Gi"),
 						}},
@@ -176,7 +176,7 @@ var _ = framework.CrainaDescribe("Block Mode RAW pvc e2e test", func() {
 				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 				VolumeMode:       &persistentVolumeBlock,
 				StorageClassName: &f.Namespace,
-				Resources: corev1.ResourceRequirements{
+				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("3Gi"),
 					}},

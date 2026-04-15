@@ -124,7 +124,7 @@ func (r *PodIOReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithEventFilter(podFilter{r.nodeName}).
 		WithOptions(controller.Options{
-			RateLimiter:             workqueue.NewItemFastSlowRateLimiter(10*time.Second, 60*time.Second, 5),
+			RateLimiter:             workqueue.NewTypedItemFastSlowRateLimiter[ctrl.Request](10*time.Second, 60*time.Second, 5),
 			MaxConcurrentReconciles: 5,
 		}).
 		For(&corev1.Pod{}).

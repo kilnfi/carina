@@ -37,7 +37,7 @@ import (
 	lcorev1 "k8s.io/client-go/listers/core/v1"
 	lstoragev1 "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/scheduler/framework"
+	"k8s.io/kube-scheduler/framework"
 )
 
 // Name 插件名称
@@ -62,8 +62,8 @@ type pvcRequest struct {
 var _ framework.FilterPlugin = &LocalStorage{}
 var _ framework.ScorePlugin = &LocalStorage{}
 
-// New type PluginFactory = func(configuration *runtime.Unknown, f FrameworkHandle) (Plugin, error)
-func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
+// New type PluginFactory = func(ctx context.Context, configuration runtime.Object, f Handle) (Plugin, error)
+func New(ctx context.Context, _ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	scLister := handle.SharedInformerFactory().Storage().V1().StorageClasses().Lister()
 	pvcLister := handle.SharedInformerFactory().Core().V1().PersistentVolumeClaims().Lister()
 	pvLister := handle.SharedInformerFactory().Core().V1().PersistentVolumes().Lister()
@@ -71,7 +71,6 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	dynamicSharedInformerFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, 0, v1.NamespaceAll, nil)
 	lvLister := dynamicSharedInformerFactory.ForResource(carinav1.GroupVersion.WithResource("logicvolumes")).Lister()
 	nsrLister := dynamicSharedInformerFactory.ForResource(carinav1beta1.GroupVersion.WithResource("nodestorageresources")).Lister()
-	ctx := context.TODO()
 	dynamicSharedInformerFactory.Start(ctx.Done())
 	dynamicSharedInformerFactory.WaitForCacheSync(ctx.Done())
 	return &LocalStorage{
@@ -90,7 +89,7 @@ func (ls *LocalStorage) Name() string {
 }
 
 // Filter 过滤掉不符合当前 Pod 运行条件的Node（相当于旧版本的 predicate）
-func (ls *LocalStorage) Filter(ctx context.Context, cycleState *framework.CycleState, pod *v1.Pod, node *framework.NodeInfo) *framework.Status {
+func (ls *LocalStorage) Filter(ctx context.Context, cycleState framework.CycleState, pod *v1.Pod, node framework.NodeInfo) *framework.Status {
 	klog.V(3).Infof("filter pod: %s, node: %s", pod.Name, node.Node().Name)
 	pvcRequestMap, nodeName, useRaw, err := ls.getPvcRequestMap(pod)
 	if err != nil {
@@ -150,7 +149,8 @@ func (ls *LocalStorage) Filter(ctx context.Context, cycleState *framework.CycleS
 }
 
 // Score 对节点进行打分（相当于旧版本的 priorities）
-func (ls *LocalStorage) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
+func (ls *LocalStorage) Score(ctx context.Context, state framework.CycleState, pod *v1.Pod, nodeInfo framework.NodeInfo) (int64, *framework.Status) {
+	nodeName := nodeInfo.Node().Name
 	klog.V(3).Infof("score pod: %s, node: %s", pod.Name, nodeName)
 	pvcRequestMap, node, useRaw, err := ls.getPvcRequestMap(pod)
 	if err != nil {

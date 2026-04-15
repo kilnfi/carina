@@ -41,6 +41,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	// +kubebuilder:scaffold:imports
@@ -78,25 +79,24 @@ func subMain() error {
 	}
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                  scheme,
-		MetricsBindAddress:      config.metricsAddr,
+		Metrics:                 metricsserver.Options{BindAddress: config.metricsAddr},
 		LeaderElection:          true,
 		LeaderElectionID:        carina.CSIPluginName + "-carina-controller",
 		LeaderElectionNamespace: configuration.RuntimeNamespace(),
-		WebhookServer: &webhook.Server{
+		WebhookServer: webhook.NewServer(webhook.Options{
 			Host:     hookHost,
 			Port:     hookPort,
 			CertDir:  config.certDir,
 			CertName: "cert",
 			KeyName:  "key",
-		},
+		}),
 	})
 	if err != nil {
 		return err
 	}
 
 	// register webhook handlers
-	// admission.NewDecoder never returns non-nil error
-	dec, _ := admission.NewDecoder(scheme)
+	dec := admission.NewDecoder(scheme)
 	wh := mgr.GetWebhookServer()
 	wh.Register("/pod/mutate", hook.PodMutator(mgr, dec))
 	//wh.Register("/pvc/mutate", hook.PVCMutator(mgr.GetClient(), dec))
