@@ -1,38 +1,37 @@
 carina-scheduler:
   enabled: true
   image:
-    repository: registry.cn-hangzhou.aliyuncs.com/carina/carina-scheduler
-    pullPolicy: IfNotPresent
+    repository: ghcr.io/kilnfi/carina
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "v0.11.0"
+    tag: ""
+    pullPolicy: IfNotPresent
 # Default values for carina-csi-driver.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 image:
-  baseRepo: registry.cn-hangzhou.aliyuncs.com/carina
   carina:
-    repository: /carina
-    tag: v0.11.0
+    repository: ghcr.io/kilnfi/carina
+    tag: ""
     pullPolicy: IfNotPresent
   livenessProbe:
-    repository: /livenessprobe
-    tag: v2.7.0
+    repository: registry.k8s.io/sig-storage/livenessprobe
+    tag: v2.18.0
     pullPolicy: IfNotPresent 
   csiProvisioner:
-    repository: /csi-provisioner
-    tag: v2.2.2
+    repository: registry.k8s.io/sig-storage/csi-provisioner
+    tag: v6.2.0
     pullPolicy: IfNotPresent
   csiResizer:
-    repository: /csi-resizer
-    tag: v1.5.0
+    repository: registry.k8s.io/sig-storage/csi-resizer
+    tag: v2.1.0
     pullPolicy: IfNotPresent
   nodeDriverRegistrar:
-    repository: /csi-node-driver-registrar
-    tag: v2.5.1
+    repository: registry.k8s.io/sig-storage/csi-node-driver-registrar
+    tag: v2.16.0
     pullPolicy: IfNotPresent
   nodeInitImage:  
-    repository: /busybox
-    tag: "1.28"
+    repository: busybox
+    tag: stable
     pullPolicy: IfNotPresent
 
 serviceAccount:

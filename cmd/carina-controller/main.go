@@ -16,22 +16,27 @@
 package main
 
 import (
+	"runtime/debug"
+
 	"github.com/carina-io/carina/cmd/carina-controller/run"
 	"github.com/carina-io/carina/utils/log"
 )
 
-var gitCommitID = "dev"
-
 func main() {
-	printWelcome()
+	printBuildInfo()
 	run.Execute()
 }
 
-func printWelcome() {
-	if gitCommitID == "" {
-		gitCommitID = "dev"
+func printBuildInfo() {
+	commit := "unknown"
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" {
+				commit = s.Value
+			}
+		}
 	}
 	log.Info("-------- Welcome to use Carina Controller Server --------")
-	log.Infof("Git Commit ID : %s", gitCommitID)
+	log.Infof("Git Commit : %s", commit)
 	log.Info("------------------------------------")
 }

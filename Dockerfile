@@ -1,23 +1,20 @@
 # Build the manager binary
 FROM golang:1.26 AS builder
 
-ENV WORKSPACE=/workspace/github.com/carina-io/carina
-ENV GOMODCACHE=$WORKSPACE/vendor
+WORKDIR /workspace
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
 
-WORKDIR $WORKSPACE
-ADD . .
-
-# Build
-RUN echo Commit: `git log --pretty='%s%b%B' -n 1`
-RUN cd $WORKSPACE/cmd/carina-node && CGO_ENABLED=0 go build -ldflags="-X main.gitCommitID=`git rev-parse HEAD`" -gcflags '-N -l' -o /tmp/carina-node .
-RUN cd $WORKSPACE/cmd/carina-controller && CGO_ENABLED=0 go build -ldflags="-X main.gitCommitID=`git rev-parse HEAD`" -gcflags '-N -l' -o /tmp/carina-controller .
+RUN cd cmd/carina-node && CGO_ENABLED=0 go build -o /tmp/carina-node .
+RUN cd cmd/carina-controller && CGO_ENABLED=0 go build -o /tmp/carina-controller .
 
 FROM alpine:3.20
 
-RUN apk add --no-cache lvm2 device-mapper e2fsprogs xfsprogs util-linux parted
+RUN apk add --no-cache bash bcache-tools device-mapper e2fsprogs eudev lvm2 parted thin-provisioning-tools util-linux xfsprogs
 
 COPY --from=builder /tmp/carina-node /usr/bin/
 COPY --from=builder /tmp/carina-controller /usr/bin/
-COPY --from=builder /workspace/github.com/carina-io/carina/debug/hack/config.json /etc/carina/
+COPY --from=builder /workspace/debug/hack/config.json /etc/carina/
 
-CMD ["echo", "carina-node", "carina-controller"]
+CMD ["carina-controller"]
