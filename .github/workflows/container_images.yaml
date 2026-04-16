@@ -39,7 +39,7 @@ jobs:
         with:
           images: ghcr.io/kilnfi/carina
           tags: |
-            type=semver,pattern=controller-{{version}}
+            type=semver,pattern=controller-v{{version}}
             type=ref,event=pr,prefix=controller-pr-
       - name: Build and push controller image
         uses: docker/build-push-action@v6
