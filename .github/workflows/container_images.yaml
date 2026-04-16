@@ -1,0 +1,97 @@
+name: Container images
+
+on:
+  release:
+    types: [published]
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'charts/**'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'charts/**'
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Controller image metadata
+        id: controller-meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/kilnfi/carina
+          tags: |
+            type=semver,pattern=controller-{{version}}
+            type=ref,event=pr,prefix=controller-pr-
+      - name: Build and push controller image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: ${{ github.event_name == 'release' }}
+          tags: ${{ steps.controller-meta.outputs.tags }}
+          labels: ${{ steps.controller-meta.outputs.labels }}
+          cache-from: type=gha,scope=controller
+          cache-to: type=gha,mode=max,scope=controller
+      - name: Scheduler image metadata
+        id: scheduler-meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/kilnfi/carina
+          tags: |
+            type=semver,pattern=scheduler-{{version}}
+            type=ref,event=pr,prefix=scheduler-pr-
+      - name: Build and push scheduler image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./scheduler
+          load: true
+          push: ${{ github.event_name == 'release' }}
+          tags: ${{ steps.scheduler-meta.outputs.tags }}
+          labels: ${{ steps.scheduler-meta.outputs.labels }}
+          cache-from: type=gha,scope=scheduler
+          cache-to: type=gha,mode=max,scope=scheduler
+      - name: Create KinD cluster
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: kind
+      # Interactive debug
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      #   with:
+      #     detached: true
+      - name: Test Kubernetes
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -x
+          controller_tag="${{ steps.controller-meta.outputs.version }}"
+          scheduler_tag="${{ steps.scheduler-meta.outputs.version }}"
+          kind load docker-image "ghcr.io/kilnfi/carina:${controller_tag}" "ghcr.io/kilnfi/carina:${scheduler_tag}"
+
+          helm install --create-namespace -n carina --set carina-scheduler.image.tag="${scheduler_tag}" --set image.carina.tag="${controller_tag}" --hide-notes --wait carina-csi-driver charts/
+
+          # Create a 50G loopback device inside carina-node to simulate a disk
+          kubectl wait pod -n carina -l app=csi-carina-node --for=condition=ready --timeout=120s
+          kubectl exec -t -n carina -c csi-carina-node ds/csi-carina-node -- sh -c "truncate -s 50G /tmp/disk.device && losetup /dev/loop2 /tmp/disk.device && pvcreate /dev/loop2"
+
+          # Run the helm test — creates a PVC and a pod that uses carina storage.
+          helm test -n carina --hide-notes carina-csi-driver

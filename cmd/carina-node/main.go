@@ -16,25 +16,29 @@
 package main
 
 import (
+	"os"
+	"runtime/debug"
+
 	"github.com/carina-io/carina/cmd/carina-node/run"
 	"github.com/carina-io/carina/utils/log"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"os"
 )
 
-var gitCommitID = "dev"
-
 func main() {
-	printWelcome()
+	printBuildInfo()
 	run.Execute()
 }
 
-func printWelcome() {
-	if gitCommitID == "" {
-		gitCommitID = "dev"
+func printBuildInfo() {
+	commit := "unknown"
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" {
+				commit = s.Value
+			}
+		}
 	}
 	log.Info("-------- Welcome to use Carina Node Server --------")
-	log.Infof("Git Commit ID : %s", gitCommitID)
+	log.Infof("Git Commit : %s", commit)
 	log.Infof("node name : %s", os.Getenv("NODE_NAME"))
 	log.Info("------------------------------------")
 }

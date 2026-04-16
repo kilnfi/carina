@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"time"
 
 	carinav1 "github.com/carina-io/carina/api/v1"
@@ -70,11 +71,11 @@ func subMain() error {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&config.zapOpts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: config.metricsAddr,
-		NewCache: cache.BuilderWithOptions(cache.Options{
+		Scheme:  scheme,
+		Metrics: metricsserver.Options{BindAddress: config.metricsAddr},
+		Cache: cache.Options{
 			Scheme: scheme,
-			SelectorsByObject: cache.SelectorsByObject{
+			ByObject: map[client.Object]cache.ByObject{
 				&corev1.Node{}: {
 					Field: fields.SelectorFromSet(fields.Set{"metadata.name": nodeName}),
 				},
@@ -85,7 +86,7 @@ func subMain() error {
 					Field: fields.SelectorFromSet(fields.Set{"metadata.name": nodeName}),
 				},
 			},
-		}),
+		},
 		LeaderElection: false,
 	})
 	if err != nil {

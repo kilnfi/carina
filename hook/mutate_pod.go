@@ -40,11 +40,11 @@ import (
 // podMutator mutates pods using PVC for Carina.
 type podMutator struct {
 	getter  *getter.RetryGetter
-	decoder *admission.Decoder
+	decoder admission.Decoder
 }
 
 // PodMutator creates a mutating webhook for Pods.
-func PodMutator(mgr manager.Manager, dec *admission.Decoder) http.Handler {
+func PodMutator(mgr manager.Manager, dec admission.Decoder) http.Handler {
 	return &webhook.Admission{Handler: podMutator{getter.NewRetryGetter(mgr), dec}}
 }
 

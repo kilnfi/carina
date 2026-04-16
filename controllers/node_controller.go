@@ -38,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 type nodeStatusType string
@@ -111,10 +110,10 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithEventFilter(pred).
 		WithOptions(controller.Options{
-			RateLimiter: workqueue.NewItemFastSlowRateLimiter(10*time.Second, 60*time.Second, 5),
+			RateLimiter: workqueue.NewTypedItemFastSlowRateLimiter[ctrl.Request](10*time.Second, 60*time.Second, 5),
 		}).
 		For(&corev1.Node{}).
-		Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForObject{}).
+		Watches(&corev1.Pod{}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
 
