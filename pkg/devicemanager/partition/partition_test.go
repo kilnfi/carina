@@ -132,7 +132,7 @@ func TestGetPartitions(t *testing.T) {
 
 func TestMount(t *testing.T) {
 
-	targetPathOut, err := localparttion.Executor.ExecuteCommandWithOutput("/usr/bin/findmnt", "-S", "/dev/loop0", "--noheadings", "--output=target")
+	targetPathOut, err := localparttion.Executor.ExecuteCommandWithOutput("findmnt", "-S", "/dev/loop0", "--noheadings", "--output=target")
 	t.Log("targetPathOut", targetPathOut)
 	if err != nil {
 		t.Log(err.Error())

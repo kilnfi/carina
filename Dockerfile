@@ -9,9 +9,9 @@ COPY . .
 RUN cd cmd/carina-node && CGO_ENABLED=0 go build -o /tmp/carina-node .
 RUN cd cmd/carina-controller && CGO_ENABLED=0 go build -o /tmp/carina-controller .
 
-FROM alpine:3.20
+FROM alpine:3.23
 
-RUN apk add --no-cache bash bcache-tools device-mapper e2fsprogs eudev lvm2 parted thin-provisioning-tools util-linux xfsprogs
+RUN apk add --no-cache bash bcache-tools bcache-tools-udev device-mapper e2fsprogs e2fsprogs-extra eudev lvm2 parted thin-provisioning-tools util-linux xfsprogs xfsprogs-extra
 
 COPY --from=builder /tmp/carina-node /usr/bin/
 COPY --from=builder /tmp/carina-controller /usr/bin/
