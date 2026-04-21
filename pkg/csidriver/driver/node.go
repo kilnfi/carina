@@ -48,7 +48,7 @@ import (
 const (
 	// DeviceDirectory is a directory where Node service creates device files.
 	DeviceDirectory  = "/dev/carina"
-	findmntCmd       = "/usr/bin/findmnt"
+	findmntCmd       = "findmnt"
 	devicePermission = 0600 | unix.S_IFBLK
 )
 
