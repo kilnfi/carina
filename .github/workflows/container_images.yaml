@@ -23,7 +23,8 @@ permissions:
   packages: write
 
 jobs:
-  build:
+  images:
+    name: ${{ case(github.event_name == 'pull_request', 'Build and test images', 'Build and push images') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
