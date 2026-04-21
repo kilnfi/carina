@@ -57,7 +57,7 @@ jobs:
         with:
           images: ghcr.io/kilnfi/carina
           tags: |
-            type=semver,pattern=scheduler-{{version}}
+            type=semver,pattern=scheduler-v{{version}}
             type=ref,event=pr,prefix=scheduler-pr-
       - name: Build and push scheduler image
         uses: docker/build-push-action@v6
