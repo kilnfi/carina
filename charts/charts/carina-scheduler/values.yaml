@@ -7,8 +7,9 @@ replicaCount: 1
 image:
   repository: ghcr.io/kilnfi/carina
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # Full image tag; defaults to <tagPrefix>v<appVersion>
   tag: ""
+  tagPrefix: scheduler-
 
 imagePullSecrets: []
 nameOverride: ""
