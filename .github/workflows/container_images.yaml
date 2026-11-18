@@ -103,4 +103,4 @@ jobs:
           kubectl exec -t -n carina -c csi-carina-node ds/csi-carina-node -- sh -c "truncate -s 50G /tmp/disk.device && losetup /dev/loop2 /tmp/disk.device && pvcreate /dev/loop2"
 
           # Run the helm test — creates a PVC and a pod that uses carina storage.
-          helm test -n carina --hide-notes carina-csi-driver
+          helm test -n carina carina-csi-driver
