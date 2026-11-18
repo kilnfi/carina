@@ -11,6 +11,7 @@ rules:
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list", "watch"]
+  # Scheduler writes its scheduling decisions on the standard k8s object, only carina controller and node deployments write there
   - apiGroups: ["carina.storage.io"]
     resources: ["logicvolumes", "nodestorageresources"]
     verbs: ["get", "list", "watch"]
